@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>The Homebrew Launcher</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            overflow: hidden;
+            font-family: sans-serif;
+            user-select: none;
+        }
+
+        .screen {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(180deg, #441172 0%, #22043e 100%);
+            overflow: hidden;
+        }
+
+        .wave-container {
+            position: absolute;
+            bottom: -10%;
+            left: 0;
+            width: 100%;
+            height: 70%;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 30;
+        }
+
+        .time {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffffff;
+            font-size: clamp(16px, 2vw, 24px);
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+        }
+
+        .logo {
+            position: absolute;
+            top: 15.5%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #ffffff;
+            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            pointer-events: none;
+        }
+
+        .logo h1 {
+            margin: 0;
+            font-size: clamp(30px, 5.8vw, 56px);
+            font-weight: 300;
+            line-height: 0.85;
+            letter-spacing: -1px;
+        }
+
+        .logo h2 {
+            margin: 0;
+            font-size: clamp(25px, 4.8vw, 46px);
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+
+        .bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.16);
+            border-radius: 50%;
+            pointer-events: none;
+            box-shadow: inset 0 0 5px rgba(255,255,255,0.22);
+            z-index: 20;
+        }
+
+        .app-wrapper {
+            position: absolute;
+            top: 27%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            z-index: 35;
+            padding: 0 30px;
+            box-sizing: border-box;
+        }
+
+        .app-container {
+            width: 580px;
+            max-width: 86vw;
+            height: 64vh;
+            overflow-y: auto;
+            padding: 14px 20px;
+            pointer-events: auto;
+            box-sizing: border-box;
+            scroll-behavior: smooth;
+        }
+
+        .app-container::-webkit-scrollbar {
+            display: none;
+        }
+        .app-container {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .app-card {
+            background: rgba(30, 12, 48, 0.94);
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            box-shadow: 2px 3px 0px rgba(0, 0, 0, 0.65);
+            cursor: pointer;
+            transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+            border: 2px solid rgba(75, 35, 105, 0.85);
+            transform-origin: center center;
+        }
+
+        .app-card:hover {
+            background: rgba(40, 17, 64, 0.98);
+            box-shadow: 2px 4px 0px rgba(0, 0, 0, 0.75);
+        }
+
+        .app-card.selected {
+            background: rgba(22, 8, 38, 0.98);
+            border-color: #9c27b0;
+            transform: scale(1.035);
+            box-shadow: 3px 5px 0px rgba(0, 0, 0, 0.8), 0 0 14px rgba(156, 39, 176, 0.45);
+            z-index: 40;
+        }
+
+        .app-card.add-card {
+            background: rgba(20, 10, 34, 0.7);
+            border: 2px dashed rgba(100, 50, 130, 0.7);
+        }
+        .app-card.add-card:hover {
+            background: rgba(32, 14, 52, 0.8);
+        }
+
+        .app-card.add-card.selected {
+            border: 2px dashed #9c27b0;
+            border-color: #9c27b0;
+        }
+
+        .app-icon {
+            width: 62px;
+            height: 62px;
+            border-radius: 8px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #ffffff;
+            font-size: 18px;
+            border: none;
+            box-shadow: none;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .app-icon.folder-icon {
+            background-image: url('https://raw.githubusercontent.com/dingusdevv/dingus/refs/heads/main/openburger.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .app-icon.store-icon {
+            background-image: url('https://raw.githubusercontent.com/dingusdevv/dingus/refs/heads/main/store.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .app-icon.plus-icon {
+            background: rgba(16, 6, 28, 0.95);
+            color: #fff;
+            font-size: 28px;
+            border: 2px solid rgba(255,255,255,0.2);
+            box-shadow: 1px 2px 0px rgba(0,0,0,0.5);
+        }
+
+        .app-details {
+            margin-left: 18px;
+            flex-grow: 1;
+            overflow: hidden;
+            padding-right: 6px;
+        }
+
+        .app-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffffff;
+            margin: 0 0 3px 0;
+            letter-spacing: 0.2px;
+        }
+
+        .app-desc-wrapper {
+            font-size: 13.5px;
+            color: #bca8c8;
+            margin: 0 0 5px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            position: relative;
+            width: 100%;
+        }
+
+        .app-desc-inner {
+            display: inline-block;
+            white-space: nowrap;
+            transform: translateX(0);
+            will-change: transform;
+        }
+
+        .app-author {
+            font-size: 12px;
+            color: #9880a8;
+            text-align: right;
+            margin: 0 2px 0 0;
+            font-style: italic;
+        }
+
+        .custom-scrollbar {
+            width: 10px;
+            height: 64vh;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-sizing: border-box;
+            display: none;
+        }
+
+        .custom-scroll-thumb {
+            position: absolute;
+            top: 0;
+            left: 0.5px;
+            width: 8px;
+            background: rgba(255, 255, 255, 0.78);
+            border-radius: 4px;
+            cursor: pointer;
+            box-shadow: 1px 1px 0px rgba(0,0,0,0.3);
+            transition: background 0.15s;
+        }
+
+        .custom-scroll-thumb:hover {
+            background: #ffffff;
+        }
+
+        .controls-hint {
+            position: absolute;
+            bottom: 12px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 11px;
+            z-index: 35;
+            pointer-events: none;
+            letter-spacing: 0.5px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(30, 8, 50, 0.65);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: linear-gradient(135deg, rgba(54, 16, 90, 0.92), rgba(80, 24, 125, 0.92));
+            padding: 24px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.25);
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            max-height: 90vh;
+            overflow-y: auto;
+            color: #ffffff;
+        }
+
+        .modal h3 {
+            margin-top: 0;
+            color: #ffffff;
+            font-size: 22px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .modal label {
+            font-size: 13px;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .modal input {
+            width: 100%;
+            padding: 10px;
+            margin: 6px 0 14px 0;
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            background: rgba(38, 10, 68, 0.6);
+            color: #ffffff;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+        }
+
+        .modal input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .modal input.modal-focused {
+            border-color: #ffffff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+            background: rgba(50, 14, 85, 0.85);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .modal-actions button {
+            padding: 10px 18px;
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .modal-actions button.modal-focused {
+            border-color: #ffffff;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+            transform: scale(1.05);
+        }
+
+        .btn-cancel {
+            background: rgba(38, 10, 68, 0.6);
+            color: #ffffff;
+        }
+
+        .btn-submit {
+            background: rgba(95, 28, 148, 0.9);
+            color: #fff;
+        }
+
+        .btn-confirm-red {
+            background: rgba(180, 20, 20, 0.9);
+            color: #fff;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(30, 8, 50, 0.6);
+            backdrop-filter: blur(2px);
+            z-index: 200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-box {
+            width: 360px;
+            height: 65px;
+            background: linear-gradient(135deg, rgba(54, 16, 90, 0.92), rgba(80, 24, 125, 0.92));
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.25);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 20px;
+            box-sizing: border-box;
+        }
+
+        .loading-bar-track {
+            width: 100%;
+            height: 12px;
+            background: rgba(25, 6, 45, 0.7);
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            box-sizing: border-box;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .loading-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #ffffff, #ebd0ff);
+            border-radius: 4px;
+            transition: width 0.2s linear;
+            box-shadow: 0 0 8px rgba(255,255,255,0.8);
+        }
+    </style>
+</head>
+<body>
+
+<div class="screen" id="app">
+    <svg class="wave-container" viewBox="0 0 400 200" preserveAspectRatio="none">
+        <path id="wave1" fill="rgba(255,255,255,0.16)"></path>
+        <path id="wave2" fill="rgba(110, 40, 175, 0.55)"></path>
+        <path id="wave3" fill="rgba(75, 20, 135, 0.9)"></path>
+    </svg>
+
+    <div class="hud">
+        <div class="time" id="timeElement"></div>
+
+        <div class="logo" id="logo">
+            <h1>the</h1>
+            <h2>homebrew</h2>
+            <h2 style="font-size: clamp(20px, 3.8vw, 38px); margin-top: -2px;">launcher</h2>
+        </div>
+    </div>
+
+    <div class="app-wrapper">
+        <div class="app-container" id="list"></div>
+        <div class="custom-scrollbar" id="track">
+            <div class="custom-scroll-thumb" id="thumb"></div>
+        </div>
+    </div>
+
+    <div class="controls-hint" id="hint">Use [ ↑ / ↓ ] to navigate, [ Enter ] to select/launch, [ Backspace ] to delete item</div>
+</div>
+
+<div class="modal-overlay" id="modal">
+    <div class="modal">
+        <h3>Add Item</h3>
+        <label>Title:</label>
+        <input type="text" id="inputTitle" placeholder="e.g. Jellyfin">
+        <label>Description:</label>
+        <input type="text" id="inputDesc" placeholder="Jellyfin is a Free Software Media System...">
+        <label>Author:</label>
+        <input type="text" id="inputAuthor" placeholder="jellyfin">
+        <label>Target URL / Redirect Link:</label>
+        <input type="text" id="inputUrl" placeholder="https://example.com">
+        <label>Icon Image URL (optional):</label>
+        <input type="text" id="inputIcon" placeholder="example.com/icon.png">
+        <div class="modal-actions">
+            <button class="btn-cancel" id="modalCancel">Cancel</button>
+            <button class="btn-submit" id="modalSubmit">Add</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal">
+        <h3>Delete Item</h3>
+        <p id="deleteText" style="font-size: 14px; color: #bca8c8; margin-bottom: 20px;">Are you sure you want to delete this item?</p>
+        <div class="modal-actions">
+            <button class="btn-cancel" id="deleteCancel">Cancel</button>
+            <button class="btn-confirm-red" id="deleteConfirm">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<div class="loading-overlay" id="loading">
+    <div class="loading-box">
+        <div class="loading-bar-track">
+            <div class="loading-bar-fill" id="loadingFill"></div>
+        </div>
+    </div>
+</div>
+
+<audio id="music" src="https://github.com/dingusdevv/dingus/raw/refs/heads/main/bgMusic.mp3" preload="auto" loop></audio>
+
+<script>
+    const time = true;
+
+    const storeItem = {
+        title: "Homebrew App Store",
+        desc: "Download homebrew applications and tools over network",
+        author: "System",
+        targetUrl: "https://github.com/",
+        iconUrl: "https://raw.githubusercontent.com/dingusdevv/dingus/refs/heads/main/store.png"
+    };
+
+    let items = [];
+    let selectedIndex = 0;
+    let modalIndex = 0;
+    let isEditing = false;
+
+    let isDeleteOpen = false;
+    let deleteIndex = -1;
+    let deleteModalIndex = 0;
+
+    let hoverTimers = {};
+    let scrollStates = {};
+    let hoveredIndex = null;
+
+    const list = document.getElementById('list');
+    const thumb = document.getElementById('thumb');
+    const track = document.getElementById('track');
+    const music = document.getElementById('music');
+    const timeElement = document.getElementById('timeElement');
+
+    if (!time) {
+        timeElement.style.display = 'none';
+    }
+
+    function startMusic() {
+        if (music.paused) {
+            music.currentTime = 0;
+            music.play().catch(() => {});
+        }
+        window.removeEventListener('click', startMusic);
+        window.removeEventListener('keydown', startMusic);
+    }
+    window.addEventListener('click', startMusic);
+    window.addEventListener('keydown', startMusic);
+
+    window.addEventListener('pageshow', () => {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('loadingFill').style.width = '0%';
+        closeModal();
+        closeDeleteModal();
+        
+        selectedIndex = 0;
+        updateSelection();
+        if (list) {
+            list.scrollTop = 0;
+        }
+
+        music.currentTime = 0;
+        music.play().catch(() => {});
+    });
+
+    function init() {
+        const saved = localStorage.getItem('homebrew_user_apps');
+        if (saved) {
+            try {
+                items = JSON.parse(saved);
+            } catch (e) {
+                items = [];
+            }
+        } else {
+            items = [];
+            save();
+        }
+        render();
+    }
+
+    function save() {
+        localStorage.setItem('homebrew_user_items', JSON.stringify(items));
+    }
+
+    function formatUrl(url) {
+        if (!url || url.trim() === '') return '';
+        let trimmed = url.trim();
+        if (!/^https?:\/\//i.test(trimmed)) {
+            return 'https://' + trimmed;
+        }
+        return trimmed;
+    }
+
+    function addItem(data) {
+        items.push({
+            title: data.title || "Untitled",
+            desc: data.desc || "No description provided.",
+            author: data.author || "Unknown",
+            targetUrl: formatUrl(data.targetUrl),
+            iconUrl: formatUrl(data.iconUrl)
+        });
+        save();
+        selectedIndex = items.length; 
+        render();
+    }
+
+    function removeItem(index) {
+        items.splice(index, 1);
+        save();
+        if (selectedIndex >= getCount()) {
+            selectedIndex = Math.max(0, getCount() - 1);
+        }
+        render();
+    }
+
+    function getCount() {
+        return 1 + items.length + 1;
+    }
+
+    function handleAction(index) {
+        const total = 1 + items.length;
+        if (index < total) {
+            const allItems = [storeItem, ...items];
+            const item = allItems[index];
+            
+            const loading = document.getElementById('loading');
+            const fill = document.getElementById('loadingFill');
+
+            loading.style.display = 'flex';
+            fill.style.width = '0%';
+
+            void fill.offsetWidth;
+            fill.style.width = '100%';
+
+            setTimeout(() => {
+                if (item.targetUrl && item.targetUrl.trim() !== '') {
+                    window.location.href = item.targetUrl.trim();
+                } else {
+                    alert(`Launching '${item.title}' by ${item.author}...`);
+                    loading.style.display = 'none';
+                }
+            }, 200);
+
+        } else {
+            openModal();
+        }
+    }
+
+    function render() {
+        list.innerHTML = '';
+
+        for (let key in hoverTimers) {
+            clearTimeout(hoverTimers[key]);
+        }
+        hoverTimers = {};
+        scrollStates = {};
+        hoveredIndex = null;
+
+        const allItems = [storeItem, ...items];
+        const totalItems = getCount();
+
+        if (selectedIndex >= totalItems) {
+            selectedIndex = Math.max(0, totalItems - 1);
+        }
+
+        allItems.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = `app-card ${index === selectedIndex ? 'selected' : ''}`;
+            
+            card.onmouseenter = () => {
+                hoveredIndex = index;
+                onEnter(index);
+            };
+            card.onmouseleave = () => {
+                if (hoveredIndex === index) {
+                    hoveredIndex = null;
+                }
+                onLeave(index);
+            };
+
+            card.onclick = () => {
+                selectedIndex = index;
+                updateSelection();
+                handleAction(index);
+            };
+
+            let iconHtml = '';
+            if (index === 0) {
+                iconHtml = `<div class="app-icon store-icon"></div>`;
+            } else if (item.iconUrl && item.iconUrl.trim() !== '') {
+                iconHtml = `<div class="app-icon" style="background-image: url('${item.iconUrl}')"></div>`;
+            } else {
+                iconHtml = `<div class="app-icon folder-icon"></div>`;
+            }
+
+            card.innerHTML = `
+                ${iconHtml}
+                <div class="app-details">
+                    <div class="app-title">${item.title}</div>
+                    <div class="app-desc-wrapper" id="desc-wrapper-${index}">
+                        <div class="app-desc-inner" id="desc-inner-${index}">${item.desc}</div>
+                    </div>
+                    <div class="app-author">${item.author}</div>
+                </div>
+            `;
+            list.appendChild(card);
+
+            scrollStates[index] = { state: 'idle', offset: 0, pauseTimer: 0 };
+        });
+
+        const addIndex = allItems.length;
+        const addCard = document.createElement('div');
+        addCard.className = `app-card add-card ${addIndex === selectedIndex ? 'selected' : ''}`;
+        
+        addCard.onmouseenter = () => {
+            hoveredIndex = addIndex;
+        };
+        addCard.onmouseleave = () => {
+            if (hoveredIndex === addIndex) {
+                hoveredIndex = null;
+            }
+        };
+
+        addCard.onclick = () => {
+            selectedIndex = addIndex;
+            updateSelection();
+            handleAction(addIndex);
+        };
+
+        addCard.innerHTML = `
+            <div class="app-icon plus-icon">+</div>
+            <div class="app-details">
+                <div class="app-title" style="color: #ffffff;">Add New Item</div>
+                <div class="app-desc-wrapper" id="desc-wrapper-${addIndex}">
+                    <div class="app-desc-inner" id="desc-inner-${addIndex}">Register a custom item into launcher</div>
+                </div>
+                <div class="app-author">System</div>
+            </div>
+        `;
+        list.appendChild(addCard);
+
+        scrollStates[addIndex] = { state: 'idle', offset: 0, pauseTimer: 0 };
+
+        updateScrollbar();
+        checkScroll();
+    }
+
+    function onEnter(index) {
+        if (hoverTimers[index]) {
+            clearTimeout(hoverTimers[index]);
+        }
+        hoverTimers[index] = setTimeout(() => {
+            const inner = document.getElementById(`desc-inner-${index}`);
+            const wrapper = document.getElementById(`desc-wrapper-${index}`);
+            if (inner && wrapper) {
+                if (inner.scrollWidth > wrapper.clientWidth) {
+                    scrollStates[index] = { state: 'scrolling', offset: 0, pauseTimer: 0 };
+                }
+            }
+        }, 1000);
+    }
+
+    function onLeave(index) {
+        if (hoverTimers[index]) {
+            clearTimeout(hoverTimers[index]);
+            delete hoverTimers[index];
+        }
+        if (scrollStates[index]) {
+            scrollStates[index] = { state: 'idle', offset: 0, pauseTimer: 0 };
+            const inner = document.getElementById(`desc-inner-${index}`);
+            if (inner) {
+                inner.style.transform = `translateX(0px)`;
+            }
+        }
+    }
+
+    function checkScroll() {
+        for (let idx in scrollStates) {
+            let i = parseInt(idx);
+            if (i !== selectedIndex) {
+                if (hoverTimers[i]) {
+                    clearTimeout(hoverTimers[i]);
+                    delete hoverTimers[i];
+                }
+                scrollStates[i] = { state: 'idle', offset: 0, pauseTimer: 0 };
+                const inner = document.getElementById(`desc-inner-${i}`);
+                if (inner) {
+                    inner.style.transform = `translateX(0px)`;
+                }
+            }
+        }
+
+        if (hoverTimers[selectedIndex]) {
+            clearTimeout(hoverTimers[selectedIndex]);
+        }
+        hoverTimers[selectedIndex] = setTimeout(() => {
+            const inner = document.getElementById(`desc-inner-${selectedIndex}`);
+            const wrapper = document.getElementById(`desc-wrapper-${selectedIndex}`);
+            if (inner && wrapper) {
+                if (inner.scrollWidth > wrapper.clientWidth) {
+                    scrollStates[selectedIndex] = { state: 'scrolling', offset: 0, pauseTimer: 0 };
+                }
+            }
+        }, 1000);
+    }
+
+    function updateScrolling() {
+        for (let index in scrollStates) {
+            let st = scrollStates[index];
+            if (st.state === 'scrolling') {
+                const inner = document.getElementById(`desc-inner-${index}`);
+                const wrapper = document.getElementById(`desc-wrapper-${index}`);
+                if (!inner || !wrapper) continue;
+
+                const maxScroll = inner.scrollWidth - wrapper.clientWidth;
+                if (maxScroll > 0) {
+                    st.offset += 1.1;
+                    if (st.offset >= maxScroll) {
+                        st.offset = maxScroll;
+                        st.state = 'pausing';
+                        st.pauseTimer = 180;
+                    }
+                    inner.style.transform = `translateX(-${st.offset}px)`;
+                } else {
+                    st.state = 'idle';
+                }
+            } else if (st.state === 'pausing') {
+                st.pauseTimer--;
+                if (st.pauseTimer <= 0) {
+                    st.state = 'scrolling';
+                    st.offset = 0;
+                    const inner = document.getElementById(`desc-inner-${index}`);
+                    if (inner) {
+                        inner.style.transform = `translateX(0px)`;
+                    }
+                }
+            }
+        }
+    }
+
+    function updateScrollbar() {
+        const maxScroll = list.scrollHeight - list.clientHeight;
+        if (maxScroll > 2) {
+            track.style.display = 'block';
+            updateThumb();
+        } else {
+            track.style.display = 'none';
+        }
+    }
+
+    function updateThumb() {
+        const maxScroll = list.scrollHeight - list.clientHeight;
+        const trackHeight = track.clientHeight;
+
+        if (maxScroll <= 0) return;
+
+        const thumbHeight = Math.max(28, (list.clientHeight / list.scrollHeight) * trackHeight);
+        thumb.style.height = `${thumbHeight}px`;
+
+        const ratio = list.scrollTop / maxScroll;
+        const maxThumbTop = trackHeight - thumbHeight;
+        thumb.style.top = `${ratio * maxThumbTop}px`;
+    }
+
+    list.addEventListener('scroll', updateThumb);
+
+    let isDragging = false;
+    let startY = 0;
+    let startScrollTop = 0;
+
+    thumb.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startY = e.clientY;
+        startScrollTop = list.scrollTop;
+        e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const deltaY = e.clientY - startY;
+        const maxScroll = list.scrollHeight - list.clientHeight;
+        const trackHeight = track.clientHeight;
+        const thumbHeight = thumb.clientHeight;
+        const maxThumbTop = trackHeight - thumbHeight;
+
+        if (maxThumbTop > 0) {
+            list.scrollTop = startScrollTop + (deltaY / maxThumbTop) * maxScroll;
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        isDragging = false;
+    });
+
+    function updateSelection() {
+        const cards = document.querySelectorAll('.app-card');
+        cards.forEach((card, index) => {
+            if (index === selectedIndex) {
+                card.classList.add('selected');
+                
+                const cardTop = card.offsetTop;
+                const cardBottom = cardTop + card.offsetHeight;
+                const scrollTop = list.scrollTop;
+                const containerHeight = list.clientHeight;
+
+                if (cardBottom > scrollTop + containerHeight - 35) {
+                    list.scrollTop = cardBottom - containerHeight + 40;
+                } else if (cardTop < scrollTop + 35) {
+                    list.scrollTop = Math.max(0, cardTop - 40);
+                }
+            } else {
+                card.classList.remove('selected');
+            }
+        });
+        checkScroll();
+    }
+
+    function updateModalFocus() {
+        const fields = [
+            document.getElementById('inputTitle'),
+            document.getElementById('inputDesc'),
+            document.getElementById('inputAuthor'),
+            document.getElementById('inputUrl'),
+            document.getElementById('inputIcon'),
+            document.getElementById('modalCancel'),
+            document.getElementById('modalSubmit')
+        ];
+
+        fields.forEach((el, idx) => {
+            if (idx === modalIndex) {
+                el.classList.add('modal-focused');
+                if (!isEditing) {
+                    el.blur();
+                }
+            } else {
+                el.classList.remove('modal-focused');
+                el.blur();
+            }
+        });
+
+        const hint = document.getElementById('hint');
+        if (isEditing) {
+            hint.innerText = 'Typing freely... Press [ Enter ] to finish editing field, [ Esc ] to cancel editing';
+        } else {
+            hint.innerText = 'Use [ ↑ / ↓ ] to navigate fields, [ ← / → ] for Cancel/Add, [ Enter ] to type/select, [ Backspace / Esc ] to close modal';
+        }
+    }
+
+    function updateDeleteModalFocus() {
+        const cancelBtn = document.getElementById('deleteCancel');
+        const confirmBtn = document.getElementById('deleteConfirm');
+
+        if (deleteModalIndex === 0) {
+            cancelBtn.classList.add('modal-focused');
+            confirmBtn.classList.remove('modal-focused');
+        } else {
+            confirmBtn.classList.add('modal-focused');
+            cancelBtn.classList.remove('modal-focused');
+        }
+    }
+
+    window.addEventListener('keydown', (e) => {
+        const modal = document.getElementById('modal');
+        const isModalOpen = modal.style.display === 'flex';
+
+        if (isDeleteOpen) {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                deleteModalIndex = deleteModalIndex === 0 ? 1 : 0;
+                updateDeleteModalFocus();
+                e.preventDefault();
+            } else if (e.key === 'Enter') {
+                if (deleteModalIndex === 0) {
+                    closeDeleteModal();
+                } else {
+                    confirmDelete();
+                }
+                e.preventDefault();
+            } else if (e.key === 'Escape' || e.key === 'Backspace') {
+                closeDeleteModal();
+                e.preventDefault();
+            }
+            return;
+        }
+
+        if (isModalOpen) {
+            const fields = [
+                document.getElementById('inputTitle'),
+                document.getElementById('inputDesc'),
+                document.getElementById('inputAuthor'),
+                document.getElementById('inputUrl'),
+                document.getElementById('inputIcon'),
+                document.getElementById('modalCancel'),
+                document.getElementById('modalSubmit')
+            ];
+
+            if (isEditing) {
+                if (e.key === 'Enter' || e.key === 'Escape') {
+                    isEditing = false;
+                    updateModalFocus();
+                    e.preventDefault();
+                }
+                return;
+            }
+
+            if (e.key === 'Backspace') {
+                closeModal();
+                e.preventDefault();
+                return;
+            }
+
+            if (e.key === 'ArrowDown' || e.key === 'Tab') {
+                if (modalIndex < 4) {
+                    modalIndex++;
+                    updateModalFocus();
+                    e.preventDefault();
+                } else if (modalIndex === 4) {
+                    modalIndex = 5;
+                    updateModalFocus();
+                    e.preventDefault();
+                }
+            } else if (e.key === 'ArrowUp' || (e.shiftKey && e.key === 'Tab')) {
+                if (modalIndex > 0 && modalIndex <= 4) {
+                    modalIndex--;
+                    updateModalFocus();
+                    e.preventDefault();
+                } else if (modalIndex === 5 || modalIndex === 6) {
+                    modalIndex = 4;
+                    updateModalFocus();
+                    e.preventDefault();
+                }
+            } else if (e.key === 'ArrowRight') {
+                if (modalIndex === 5) {
+                    modalIndex = 6;
+                    updateModalFocus();
+                    e.preventDefault();
+                }
+            } else if (e.key === 'ArrowLeft') {
+                if (modalIndex === 6) {
+                    modalIndex = 5;
+                    updateModalFocus();
+                    e.preventDefault();
+                }
+            } else if (e.key === 'Enter') {
+                if (modalIndex < 5) {
+                    isEditing = true;
+                    fields[modalIndex].focus();
+                    updateModalFocus();
+                } else if (modalIndex === 5) {
+                    closeModal();
+                } else if (modalIndex === 6) {
+                    submit();
+                }
+                e.preventDefault();
+            } else if (e.key === 'Escape') {
+                closeModal();
+                e.preventDefault();
+            }
+            return;
+        }
+
+        const totalItems = getCount();
+        if (totalItems === 0) return;
+
+        if (e.key === 'ArrowDown') {
+            if (selectedIndex < totalItems - 1) {
+                selectedIndex++;
+                updateSelection();
+            }
+            e.preventDefault();
+        } else if (e.key === 'ArrowUp') {
+            if (selectedIndex > 0) {
+                selectedIndex--;
+                updateSelection();
+            }
+            e.preventDefault();
+        } else if (e.key === 'Enter') {
+            handleAction(selectedIndex);
+            e.preventDefault();
+        } else if (e.key === 'Backspace') {
+            let targetIndex = (hoveredIndex !== null) ? hoveredIndex : selectedIndex;
+
+            if (targetIndex > 0 && targetIndex <= items.length) {
+                openDeleteModal(targetIndex - 1);
+                e.preventDefault();
+            }
+        }
+    });
+
+    document.getElementById('modalCancel').onclick = () => closeModal();
+    document.getElementById('modalSubmit').onclick = () => submit();
+
+    document.getElementById('deleteCancel').onclick = () => closeDeleteModal();
+    document.getElementById('deleteConfirm').onclick = () => confirmDelete();
+
+    function openModal() {
+        modalIndex = 0;
+        isEditing = false;
+        document.getElementById('modal').style.display = 'flex';
+        updateModalFocus();
+    }
+
+    function closeModal() {
+        document.getElementById('modal').style.display = 'none';
+        isEditing = false;
+        
+        document.getElementById('inputTitle').value = '';
+        document.getElementById('inputDesc').value = '';
+        document.getElementById('inputAuthor').value = '';
+        document.getElementById('inputUrl').value = '';
+        document.getElementById('inputIcon').value = '';
+
+        document.getElementById('hint').innerText = 'Use [ ↑ / ↓ ] to navigate, [ Enter ] to select/launch, [ Backspace ] to delete item';
+    }
+
+    function openDeleteModal(userItemIdx) {
+        deleteIndex = userItemIdx;
+        deleteModalIndex = 0;
+        isDeleteOpen = true;
+        const itemObj = items[userItemIdx];
+        document.getElementById('deleteText').innerText = `Are you sure you want to delete '${itemObj.title}'?`;
+        document.getElementById('deleteModal').style.display = 'flex';
+        updateDeleteModalFocus();
+    }
+
+    function closeDeleteModal() {
+        isDeleteOpen = false;
+        deleteIndex = -1;
+        document.getElementById('deleteModal').style.display = 'none';
+        document.getElementById('hint').innerText = 'Use [ ↑ / ↓ ] to navigate, [ Enter ] to select/launch, [ Backspace ] to delete item';
+    }
+
+    function confirmDelete() {
+        if (deleteIndex >= 0 && deleteIndex < items.length) {
+            removeItem(deleteIndex);
+        }
+        closeDeleteModal();
+    }
+
+    function submit() {
+        const title = document.getElementById('inputTitle').value.trim();
+        const desc = document.getElementById('inputDesc').value.trim();
+        const author = document.getElementById('inputAuthor').value.trim();
+        const targetUrl = document.getElementById('inputUrl').value.trim();
+        const iconUrl = document.getElementById('inputIcon').value.trim();
+
+        if (!title) {
+            alert('Title is required!');
+            return;
+        }
+
+        addItem({ title, desc, author, targetUrl, iconUrl });
+        closeModal();
+    }
+
+    const container = document.getElementById('app');
+    const bubbleCount = 48;
+    const bubbles = [];
+
+    for (let i = 0; i < bubbleCount; i++) {
+        const b = {
+            x: Math.random() * window.innerWidth,
+            y: window.innerHeight * 0.45 + Math.random() * (window.innerHeight * 0.55),
+            angle: Math.random(),
+            angv: 0.01 + Math.random() * 0.02,
+            size: 10 + Math.random() * 25,
+            speed: 1 + Math.random() * 1.5,
+            element: document.createElement('div')
+        };
+        b.element.className = 'bubble';
+        b.element.style.width = `${b.size}px`;
+        b.element.style.height = `${b.size}px`;
+        container.appendChild(b.element);
+        bubbles.push(b);
+    }
+
+    let waveCurves = [
+        { phase: Math.random(), amplitude: 25, velocity: 1.2 },
+        { phase: Math.random(), amplitude: 18, velocity: 2.0 },
+        { phase: Math.random(), amplitude: 12, velocity: 2.7 }
+    ];
+
+    let waveHeights = new Array(32).fill(60);
+
+    function updateWaves() {
+        const numPoints = 32;
+        let points1 = [], points2 = [], points3 = [];
+
+        for (let i = 0; i < numPoints; i++) {
+            let x = i / (numPoints - 1);
+            let y1 = 40, y2 = 30, y3 = 20;
+            
+            for (let j = 0; j < waveCurves.length; j++) {
+                let ampl = waveCurves[j].amplitude;
+                let angle = 2 * Math.PI * (waveCurves[j].velocity * x + waveCurves[j].phase);
+                y1 += 0.5 * ampl * Math.sin(angle);
+                y2 += 0.4 * ampl * Math.cos(angle);
+                y3 += 0.6 * ampl * Math.sin(angle * 0.8);
+            }
+            
+            let finalY3 = y3 + 40;
+            waveHeights[i] = finalY3;
+
+            let xp = x * 400;
+            points1.push(`${xp},${y1}`);
+            points2.push(`${xp},${y2 + 20}`);
+            points3.path = `${xp},${finalY3}`;
+            points3.push(`${xp},${finalY3}`);
+        }
+
+        document.getElementById('wave1').setAttribute('d', `M 0 200 L ${points1.join(' L ')} L 400 200 Z`);
+        document.getElementById('wave2').setAttribute('d', `M 0 200 L ${points2.join(' L ')} L 400 200 Z`);
+        document.getElementById('wave3').setAttribute('d', `M 0 200 L ${points3.join(' L ')} L 400 200 Z`);
+
+        for (let j = 0; j < waveCurves.length; j++) {
+            waveCurves[j].phase += waveCurves[j].velocity / 250.0;
+        }
+    }
+
+    let logoPosX = 0, logoPosY = 0;
+
+    function animate() {
+        updateWaves();
+        updateScrolling();
+
+        for (let i = 0; i < bubbles.length; i++) {
+            let b = bubbles[i];
+            b.y -= b.speed;
+
+            b.angle += b.angv;
+            let xPos = b.x + Math.sin(2 * Math.PI * b.angle) * 15;
+
+            let normalizedX = Math.max(0, Math.min(window.innerWidth, xPos)) / window.innerWidth;
+            let waveIndex = Math.floor(normalizedX * (waveHeights.length - 1));
+            let surfaceY = window.innerHeight * 0.4 + (waveHeights[waveIndex] / 200) * (window.innerHeight * 0.7);
+
+            if (b.y < surfaceY) {
+                b.y = window.innerHeight + 50;
+                b.x = Math.random() * window.innerWidth;
+            }
+
+            b.element.style.transform = `translate(${xPos}px, ${b.y}px)`;
+        }
+
+        logoPosX += 0.015;
+        logoPosY += 0.01;
+        let lX = 15 * Math.sin(logoPosX);
+        let lY = 5 * Math.sin(logoPosY);
+        document.getElementById('logo').style.transform = `translate(calc(-50% + ${lX}px), calc(-50% + ${lY}px))`;
+
+        requestAnimationFrame(animate);
+    }
+
+    if (time) {
+        setInterval(() => {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            timeElement.innerText = `${h}:${m}:${s}`;
+        }, 1000);
+    }
+
+    init();
+    requestAnimationFrame(animate);
+</script>
+
+</body>
+</html>
